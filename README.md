@@ -164,12 +164,15 @@ CREATE EXTENSION pg_table_bloat;
 ## Testing
 
 ```bash
-# Pure math, no Postgres:
-cargo test --lib unit_tests
+# Unit tests (pure math, no Postgres boot — but still needs pgrx-pg-sys
+# bindings, so a Postgres header path must be set up via `cargo pgrx init`):
+cargo test --no-default-features --features pg16 --lib unit_tests
 
 # Integration: boots a real Postgres via pgrx, installs the extension, runs SQL:
 cargo pgrx test pg16
 ```
+
+The CI workflow runs both against PostgreSQL 14, 15, 16, and 17 in a matrix.
 
 ## When NOT to use this
 
