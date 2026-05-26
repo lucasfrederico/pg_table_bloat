@@ -8,22 +8,18 @@ on:
     branches: [main]
 
 jobs:
-  unit:
-    name: Unit tests (math only)
+  fmt:
+    name: Formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: cargo fmt
-        run: cargo fmt --check
-      - name: cargo clippy
-        run: cargo clippy --no-default-features --features pg16 -- -D warnings
-      - name: Unit tests
-        run: cargo test --no-default-features --features pg16 --lib unit_tests
+        with:
+          components: rustfmt
+      - run: cargo fmt --check
 
   pgrx:
-    name: pgrx test (pg${{ matrix.pg }})
+    name: pg${{ matrix.pg }} (clippy + unit + integration)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -32,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install PostgreSQL ${{ matrix.pg }} build deps
+      - name: Install Postgres build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -41,6 +37,9 @@ jobs:
             ccache pkg-config
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: pgrx-${{ matrix.pg }}
@@ -48,20 +47,30 @@ jobs:
       - name: Install cargo-pgrx
         run: cargo install --locked cargo-pgrx --version 0.13.1
 
-      - name: Cache pgrx install
+      - name: Cache pgrx home
         id: pgrx-cache
         uses: actions/cache@v4
         with:
           path: ~/.pgrx
-          key: pgrx-${{ matrix.pg }}-${{ runner.os }}-v1
+          key: pgrx-home-${{ matrix.pg }}-${{ runner.os }}-v1
 
-      - name: pgrx init (build pg${{ matrix.pg }} from source)
+      - name: pgrx init (build Postgres ${{ matrix.pg }})
         if: steps.pgrx-cache.outputs.cache-hit != 'true'
         run: cargo pgrx init --pg${{ matrix.pg }} download
 
-      - name: pgrx init (use cached postgres)
+      # When the cache was hit, the toolchain dir exists but pgrx still
+      # needs to know where pg_config lives. Use a glob to find it.
+      - name: pgrx init (use cached Postgres)
         if: steps.pgrx-cache.outputs.cache-hit == 'true'
-        run: cargo pgrx init --pg${{ matrix.pg }} ~/.pgrx/${{ matrix.pg }}.*/bin/pg_config
+        run: |
+          PG_CONFIG=$(find ~/.pgrx -name pg_config -path "*${{ matrix.pg }}*" | head -1)
+          cargo pgrx init --pg${{ matrix.pg }} "$PG_CONFIG"
 
-      - name: Run pg_test integration tests
+      - name: clippy
+        run: cargo clippy --no-default-features --features pg${{ matrix.pg }} -- -D warnings
+
+      - name: Unit tests (pure math)
+        run: cargo test --no-default-features --features pg${{ matrix.pg }} --lib unit_tests
+
+      - name: pg_test integration tests
         run: cargo pgrx test pg${{ matrix.pg }}
