@@ -1,0 +1,43 @@
+[package]
+name = "pg_table_bloat"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lucas Frederico <lucas.frederico@outlook.com.br>"]
+description = "PostgreSQL extension that estimates table bloat from pg_class + pg_stats without requiring pgstattuple."
+license = "MIT"
+repository = "https://github.com/lucasfrederico/pg_table_bloat"
+readme = "README.md"
+keywords = ["postgres", "postgresql", "pgrx", "bloat", "vacuum"]
+categories = ["database"]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "pgrx_embed_pg_table_bloat"
+path = "./src/bin/pgrx_embed.rs"
+
+[features]
+default = ["pg16"]
+pg12 = ["pgrx/pg12", "pgrx-tests/pg12" ]
+pg13 = ["pgrx/pg13", "pgrx-tests/pg13" ]
+pg14 = ["pgrx/pg14", "pgrx-tests/pg14" ]
+pg15 = ["pgrx/pg15", "pgrx-tests/pg15" ]
+pg16 = ["pgrx/pg16", "pgrx-tests/pg16" ]
+pg17 = ["pgrx/pg17", "pgrx-tests/pg17" ]
+pg_test = []
+
+[dependencies]
+pgrx = "=0.13.1"
+
+[dev-dependencies]
+pgrx-tests = "=0.13.1"
+
+[profile.dev]
+panic = "unwind"
+
+[profile.release]
+panic = "unwind"
+opt-level = 3
+lto = "fat"
+codegen-units = 1

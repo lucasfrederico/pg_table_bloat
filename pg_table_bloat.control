@@ -1,0 +1,5 @@
+comment = 'Estimates table bloat from pg_class and pg_stats — no pgstattuple required'
+default_version = '@CARGO_VERSION@'
+module_pathname = '$libdir/pg_table_bloat'
+relocatable = false
+superuser = false
